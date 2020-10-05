@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <script src="three.min.js"></script>
+    <script src="GLTFLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@pixiv/three-vrm@0.3.5/lib/three-vrm.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/facemesh"></script>
+    <script src="test.js"></script>
+    <title>chat_with_avater</title>
+    <script src="https://cdn.webrtc.ecl.ntt.com/skyway-latest.js"></script>
+
+</head>
+
+<body>
+
+    Avatar
+    <select id="avatar">
+        <option value="models/男女兼用JK.vrm">男女兼用JK</option>
+        <option value="models/AliciaSolid.vrm">AliciaSolid</option>
+    </select>
+    </div>
+    </div>  
+    <div id=button-align>
+    <button id="button-effect" onclick="start()">君に決めた</button>
+    </div>
+    <style>
+        @media screen and (min-width: 644px) {
+            .oneline {
+                width: 966px;
+            }
+        }
+    </style>
+    <audio id="my-audio" autoplay></audio>
+    YourID
+    <p id="my-id"></p>
+    Chat
+    <input type="text" placeholder="Join room..." id="room-id">
+    <input type = "text" placeholder="Your Name" id="nickname">
+    <button id="join-trigger">Join</button>
+    <button id="leave-trigger">Leave</button>
+
+
+    <div>
+        <input type="text" placeholder="Enter the message" id="local-text">
+        <button id="send-trigger">Send</button>
+    </div>
+ 
+    <pre class="messages" id="messages"></pre>
+
+
+
+    <div id="videos-container" class="videos-container">
+        <span id="vrm_parent"
+            style="border:solid 1px red;width:320px;height:240px;overflow:hidden;box-sizing:content-box; display:inline-block;"></span>
+    </div>
+    <div class="oneline">
+        <video id='input' width="320" height="240" autoplay muted playsinline
+            style="border:solid 1px blue;box-sizing:content-box;display:inline-block;"></video>
+
+        <span style="position:relative;display:inline-block;">
+            <canvas id='output' width="320" height="240"
+                style="border:solid 1px yellow;box-sizing:content-box;"></canvas>
+            <span id='loadingicon' class="fa fa-spinner fa-spin"
+                style="position:absolute;font-size:100px;top:70px;left: 110px;display:none;"></span>
+        </span>
+        <p><canvas id="myCanvas"></canvas></p>
+    </div>
+    <script>
+        const peer = new Peer({
+            key: '72aa90ed-09d6-439b-9a8b-138055d85ca7',
+            debug: 3
+        });
+
+        peer.on('open', () => {
+            document.getElementById('my-id').textContent = peer.id;
+        });
+
+        let localStream;
+
+        const localVideo = document.getElementById('vrm_parent');
+        const localId = document.getElementById('my-id');
+        const videosContainer = document.getElementById('videos-container');
+
+        const roomId = document.getElementById('room-id');
+        const messages = document.getElementById('messages');
+        const joinTrigger = document.getElementById('join-trigger');
+        const leaveTrigger = document.getElementById('leave-trigger');
+
+        const localText = document.getElementById('local-text');
+        const sendTrigger = document.getElementById('send-trigger');
+        const nickname = document.getElementById('nickname');
+
+
+        joinTrigger.addEventListener('click', () => {
+            const room = peer.joinRoom(roomId.value, {
+                mode: 'sfu',
+                stream: localStream,
+            });
+
+            room.on('open', () => {
+                messages.textContent += `===You joined===\n`;
+            });
+
+            room.on('peerJoin', peerId => {
+                messages.textContent += `===${peerId} joined===\n`;
+            });
+
+
+            room.on('data', ({ data, src }) => {
+                // Show a message sent to the room and who sent
+                messages.textContent += `${src} ${data}\n`;
+            });
+
+            sendTrigger.addEventListener('click', onClickSend);
+
+            function onClickSend() {
+                // Send message to all of the peers in the room via websocket
+                room.send(`(${nickname.value}): ${localText.value}`);
+
+                messages.textContent += `${peer.id}(${nickname.value}): ${localText.value}\n`;
+                localText.value = '';
+            }
+
+
+            room.on('stream', async stream => {
+                const remoteVideo = document.createElement('video');
+                remoteVideo.style.height =  '240px';
+                remoteVideo.srcObject = stream;
+                remoteVideo.playsInline = true;
+                remoteVideo.setAttribute('data-peer-id', stream.peerId);
+                videosContainer.append(remoteVideo);
+
+                await remoteVideo.play().catch(console.error);
+            });
+
+            room.on('peerLeave', peerId => {
+                const remoteVideo = videosContainer.querySelector(`[data-peer-id="${peerId}"]`);
+                remoteVideo.srcObject.getTracks().forEach(track => {
+                    track.stop();
+                });
+                remoteVideo.srcObject = null;
+                remoteVideo.remove();
+
+                messages.textContent += `===${peerId} left===\n`;
+            });
+
+            room.once('close', () => {
+                messages.textContent += '===You left ===\n';
+                const remoteVideos = videosContainer.querySelectorAll('[data-peer-id]');
+                Array.from(remoteVideos)
+                    .forEach(remoteVideo => {
+                        remoteVideo.srcObject.getTracks().forEach(track => track.stop());
+                        remoteVideo.srcObject = null;
+                        remoteVideo.remove();
+                    });
+            });
+
+            leaveTrigger.addEventListener('click', () => {
+                room.close();
+            }, { once: true });
+        });
+
+    </script>
+</body>
+
+</html>
