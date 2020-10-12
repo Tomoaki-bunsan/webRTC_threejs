@@ -32,11 +32,20 @@ async function initVRM(gltf) {
 async function setupCamera(videoElement) {  //カメラを用意
   const constraints = { video: { width: 320, height: 240 }, audio: true }; 
   const stream = await navigator.mediaDevices.getUserMedia(constraints);
-  let myaudio = stream.getAudioTracks()[0];
+  let myaudio = stream.getAudioTracks()[0];  //カメラから音声を抜き取る
   videoElement.srcObject = stream;
   const canvas2 = document.getElementById("myCanvas");
   var avatarcamera = canvas2.captureStream(60);
-  avatarcamera.addTrack(myaudio);
+  const audioCtx = new AudioContext();
+  const source = audioCtx.createMediaStreamSource(stream);
+  const shifter = new Tone.PitchShift(5);
+  const reverb = new Tone.Freeverb();
+  const effectedDest = Tone.context.createMediaStreamDestination();
+  source.connect(shifter);
+  shifter.connect(reverb);
+  reverb.connect(effectedDest);
+  const effectedTrack = effectedDest.stream.getAudioTracks()[0];
+  avatarcamera.addTrack(effectedTrack);  //avatar画面に音声を追加
 
 
   // 着信時に相手にカメラ映像を返せるように、グローバル変数に保存しておく
