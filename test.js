@@ -36,18 +36,8 @@ async function setupCamera(videoElement) {  //カメラを用意
   videoElement.srcObject = stream;
   const canvas2 = document.getElementById("myCanvas");
   var avatarcamera = canvas2.captureStream(60);
-  const audioCtx = new AudioContext();
-  const source = audioCtx.createMediaStreamSource(stream);
-  const shifter = new Tone.PitchShift(5);
-  const reverb = new Tone.Freeverb();
-  const effectedDest = Tone.context.createMediaStreamDestination();
-  source.connect(shifter);
-  shifter.connect(reverb);
-  reverb.connect(effectedDest);
-  const effectedTrack = effectedDest.stream.getAudioTracks()[0];
-  avatarcamera.addTrack(effectedTrack);  //avatar画面に音声を追加
-
-
+  avatarcamera.addTrack(myaudio);  //avatar画面に音声を追加
+  
   // 着信時に相手にカメラ映像を返せるように、グローバル変数に保存しておく
   localStream = avatarcamera;
   return new Promise(resolve => {
@@ -102,7 +92,23 @@ function startRender(input, output, model) {
   renderFrame();
 }
 
+function bpm(){
+  //テキストボックスに数字を入れる
+  //10秒ごとに数字を取得　数字に応じた音を鳴らす
+  var func = function(){
+    var bpm_value = document.getElementById("bpm").value;
+    if (bpm_value < 80){
+      return 0;
+    }else if(80 <= bpm_value){
+      document.getElementById("heartbeat").play();
+    }
+  }
+  var timer = setInterval(func,10000)
+}
 
+function clearbpm(){
+  document.getElementById("bpm").value = "";
+}
 
 async function start() {
   const tmp = document.getElementById("avatar").value; //avaterの種類を格納
@@ -113,4 +119,6 @@ async function start() {
   await setupCamera(input);
   const model = await facemesh.load({ maxFaces: 1 });
   startRender(input, output, model);
+  bpm();
+  clearbpm();
 }

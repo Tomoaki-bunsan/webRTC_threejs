@@ -5,14 +5,15 @@
     <meta charset="UTF-8">
     <script src="three.min.js"></script>
     <script src="GLTFLoader.js"></script>
-    <script src='Tone.js'></script>
     <script src="https://cdn.jsdelivr.net/npm/@pixiv/three-vrm@0.3.5/lib/three-vrm.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/facemesh"></script>
     <script src="test.js"></script>
     <title>chat_with_avater</title>
     <script src="https://cdn.webrtc.ecl.ntt.com/skyway-latest.js"></script>
-
+    <audio id="heartbeat" preload="auto">
+        <source src="./sounds/心音.wav" type="audio/wav">
+    </audio>
 </head>
 
 <body>
@@ -69,6 +70,12 @@
         </span>
         <p><canvas id="myCanvas"></canvas></p>
     </div>
+
+    <p>BPM<span id="span"></span></p>
+    <input type="text" value="" id="bpm" >
+    <input type="button" value="BPM" onclick="bpm()">
+    <input type="button" value="クリア" onclick="clearbpm()">
+
     <script>
         const peer = new Peer({
             key: '72aa90ed-09d6-439b-9a8b-138055d85ca7',
