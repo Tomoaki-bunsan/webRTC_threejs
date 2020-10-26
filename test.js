@@ -5,9 +5,10 @@ function setupScene(vrm_parent, avatar_name) {  //シーンを設定
   renderer.setSize(320, 240);
   renderer.setPixelRatio(window.devicePixelRatio);
   vrm_parent.appendChild(renderer.domElement);
-  window.camera = new THREE.PerspectiveCamera(50.0, 4.0 / 3.0, 0.1, 5.0);
+  window.camera = new THREE.PerspectiveCamera(50.0, 4.0 / 3.0, 0.1, 100.0); //カメラの初期化
+
   window.scene = new THREE.Scene();
-  scene.add(new THREE.DirectionalLight(0xffffff));
+  scene.add(new THREE.DirectionalLight(0xffffff)); //光源
   new THREE.GLTFLoader().load(
     `${avatar_name}`, //選択したavatarで生成
     initVRM,
@@ -24,6 +25,7 @@ async function initVRM(gltf) {
   vrm.humanoid.getBoneNode(THREE.VRMSchema.HumanoidBoneName.RightUpperArm).rotation.z = -Math.PI * 2 / 5;
   const head = vrm.humanoid.getBoneNode(THREE.VRMSchema.HumanoidBoneName.Head);
   camera.position.set(0.0, head.getWorldPosition(new THREE.Vector3()).y + 0.05, 0.5);
+
   window.clock = new THREE.Clock();
   clock.start();
   renderer.render(scene, camera);
@@ -93,14 +95,26 @@ function startRender(input, output, model) {
 }
 
 function bpm(){
-  //テキストボックスに数字を入れる
-  //10秒ごとに数字を取得　数字に応じた音を鳴らす
+  /*
+  テキストボックスに数字を入れる
+  数字を取得後、数字に応じた音を鳴らして、背景の色を変える
+  */
   var func = function(){
     var bpm_value = document.getElementById("bpm").value;
+    document.getElementById("heartbeat").pause();
+    var geometry = new THREE.BoxGeometry( 20, 30, 1 ); //背景
+    var material = new THREE.MeshBasicMaterial( {color: 'skyblue'} );
+    var cube = new THREE.Mesh( geometry, material );
+    cube.position.set(0, -5, -15);
+    scene.add( cube );
     if (bpm_value < 80){
-      return 0;
+      document.getElementById("heartbeat").pause();  //音の停止
+      cube.material.color.set('skyblue');  //色の変更
+      renderer.render(scene, camera);
     }else if(80 <= bpm_value){
-      document.getElementById("heartbeat").play();
+      document.getElementById("heartbeat").play();  //音の再生
+      cube.material.color.set('orange');
+      renderer.render(scene, camera);
     }
   }
   var timer = setInterval(func,10000)
