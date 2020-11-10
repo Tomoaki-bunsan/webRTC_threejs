@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Marker Based AR with AR.js and Three.js</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/110/three.js"></script>
+    <script src="https://raw.githack.com/AR-js-org/AR.js/3.1.0/three.js/build/ar.js"></script>
+    <script src="GLTFLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@pixiv/three-vrm@0.3.5/lib/three-vrm.min.js"></script>
+  </head>
+  <body>
+    <script>
+      const renderer = new THREE.WebGLRenderer({
+        antialias: true,
+        alpha: true,
+        logarithmicDepthBuffer: true
+      });
+      renderer.setClearColor(new THREE.Color(), 0);
+      renderer.setSize(640, 480);
+      renderer.domElement.style.position = 'absolute';
+      renderer.domElement.style.top = '0px';
+      renderer.domElement.style.left = '0px';
+      document.body.appendChild(renderer.domElement);
+
+      const scene = new THREE.Scene();
+      scene.visible = false;
+      const camera = new THREE.Camera(90.0, 4.0 / 3.0, 0.1, 100.0);
+      camera.position.set(0.0, 1.6, 0.5); //(0.0, 1.5, 0.5)ぐらい
+      scene.add(camera);
+
+      const arToolkitSource = new THREEx.ArToolkitSource({
+        sourceType: 'image',
+        sourceUrl : 'data/img2.png'
+      });
+
+      arToolkitSource.init(() => {
+        setTimeout(() => {
+          onResize();
+        }, 2000);
+      });
+
+      addEventListener('resize', () => {
+        onResize();
+      });
+
+      function onResize() {
+        arToolkitSource.onResizeElement();
+        arToolkitSource.copyElementSizeTo(renderer.domElement);
+        if (arToolkitContext.arController !== null) {
+          arToolkitSource.copyElementSizeTo(arToolkitContext.arController.canvas);
+        }
+      };
+
+      const arToolkitContext = new THREEx.ArToolkitContext({
+        cameraParametersUrl: 'data/camera_para.dat',
+        detectionMode: 'mono'
+      });
+
+      arToolkitContext.init(() => {
+        camera.projectionMatrix.copy(arToolkitContext.getProjectionMatrix());
+      });
+
+      const arMarkerControls = new THREEx.ArMarkerControls(arToolkitContext, camera, {
+        type: 'pattern',
+        patternUrl: 'data/patt.hiro',
+        changeMatrixMode: 'cameraTransformMatrix'
+      });
+
+      /*const mesh = new THREE.Mesh(
+        new THREE.CubeGeometry(1, 1, 1),
+        new THREE.MeshNormalMaterial(),
+      );
+      mesh.position.y = 1.0;
+      scene.add(mesh);
+      */
+      new THREE.GLTFLoader().load(
+        `${'models/男女兼用JK.vrm'}`, //選択したavatarで生成
+        initVRM,
+        progress => console.log("Loading model...", 100.0 * (progress.loaded / progress.total), "%"),
+        console.error
+      );
+
+      async function initVRM(gltf) {
+        window.vrm = await THREE.VRM.from(gltf);
+        scene.add(vrm.scene);
+        vrm.humanoid.getBoneNode(THREE.VRMSchema.HumanoidBoneName.Hips).rotation.y = Math.PI;
+        vrm.humanoid.getBoneNode(THREE.VRMSchema.HumanoidBoneName.LeftUpperArm).rotation.z = Math.PI * 2 / 5;
+        vrm.humanoid.getBoneNode(THREE.VRMSchema.HumanoidBoneName.RightUpperArm).rotation.z = -Math.PI * 2 / 5;
+        const head = vrm.humanoid.getBoneNode(THREE.VRMSchema.HumanoidBoneName.Head);
+
+
+        window.clock = new THREE.Clock();
+        clock.start();
+        renderer.render(scene, camera);
+      }
+
+      /*const clock = new THREE.Clock();
+      requestAnimationFrame(function animate(){
+        requestAnimationFrame(animate);
+        if (arToolkitSource.ready) {
+          arToolkitContext.update(arToolkitSource.domElement);
+          scene.visible = camera.visible;
+        }
+        const delta = clock.getDelta();
+        mesh.rotation.x += delta * 1.0;
+        mesh.rotation.y += delta * 1.5; 
+        renderer.render(scene, camera);
+      });*/
+    </script>
+  </body>
+</html>

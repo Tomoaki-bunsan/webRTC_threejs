@@ -3,13 +3,14 @@
 
 <head>
     <meta charset="UTF-8">
-    <script src="three.min.js"></script>
-    <script src="GLTFLoader.js"></script>
+    <script src="js/three.min.js"></script>
+    <script src="js/GLTFLoader.js"></script>
+    <script src="https://raw.githack.com/AR-js-org/AR.js/3.1.0/three.js/build/ar.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@pixiv/three-vrm@0.3.5/lib/three-vrm.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/facemesh"></script>
-    <script src="test.js"></script>
-    <script src="OrbitControls.js"></script>
+    <script src="js/test.js"></script>
+    <!-- <script src="OrbitControls.js"></script> -->
     <title>chat_with_avater</title>
     <script src="https://cdn.webrtc.ecl.ntt.com/skyway-latest.js"></script>
     <audio id="heartbeat" preload="auto">
@@ -57,14 +58,14 @@
 
     <div id="videos-container" class="videos-container">
         <span id="vrm_parent"
-            style="border:solid 1px red;width:320px;height:240px;overflow:hidden;box-sizing:content-box; display:inline-block;"></span>
+            style="border:solid 1px red;width:1000px;height:920px;overflow:hidden;box-sizing:content-box; display:inline-block;"></span>
     </div>
     <div class="oneline">
         <video id='input' width="320" height="240" autoplay muted playsinline
             style="border:solid 1px blue;box-sizing:content-box;display:inline-block;"></video>
 
         <span style="position:relative;display:inline-block;">
-            <canvas id='output' width="320" height="240"
+            <canvas id='output' width="1080" height="920"
                 style="border:solid 1px yellow;box-sizing:content-box;"></canvas>
             <span id='loadingicon' class="fa fa-spinner fa-spin"
                 style="position:absolute;font-size:100px;top:70px;left: 110px;display:none;"></span>

@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title></title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<script src='js/three.min.js'></script>
+		<script src="https://raw.githack.com/AR-js-org/AR.js/3.1.0/three.js/build/ar.js"></script>
+		<!-- <script src='js/libs/stats.min.js'></script> -->
+		<script src="js/GLTFLoader.js"></script>
+		<script src="js/VRMLoader.js"></script>
+		<script src="js/test2.js" defer></script>
+		<script src="js/face-api.js"></script>
+	</head>
+	<body style="margin:0px; overflow:hidden;">
+		<div id="loading" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
+			<img src="assets/loading.gif">
+			<div id="message" style="width:150px;"></div>
+		</div>
+		<div id="canvas" style="width:640px;height:480px;"></div>
+		<p><canvas id="myCanvas"></canvas></p>
+		<video id="webcam-video" muted></video>
+		<canvas id="landmarks"></canvas>
+	</body>
+</html>
