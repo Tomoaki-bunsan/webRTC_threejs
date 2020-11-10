@@ -14,7 +14,7 @@ const $video = document.getElementById('webcam-video')
 const $landmarkCanvas = document.getElementById('landmarks')
 
 //黒枠の幅（ジェネレータのPatternRatioと合わせる）
-const patternRatio = 0.9;
+const patternRatio = 0.7;
 //マーカーを検出するフレームレート
 const maxDetectionRate = 30;
 
