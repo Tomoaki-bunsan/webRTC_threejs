@@ -1,3 +1,5 @@
+import * as faceapi from './face-api.js'
+
 //モデルの位置
 const posX = 0;
 const posY = 0;
@@ -12,6 +14,8 @@ let headYawAngle
 let prevHeadYawAngle
 const $video = document.getElementById('webcam-video')
 const $landmarkCanvas = document.getElementById('landmarks')
+var mesh
+
 
 //黒枠の幅（ジェネレータのPatternRatioと合わせる）
 const patternRatio = 0.7;
@@ -49,7 +53,7 @@ const loading = document.getElementById("loading");
 const initRenderer = async () => {
 	//z-fighting対策でlogarithmicDepthBufferを指定
 	renderer = new THREE.WebGLRenderer({ canvas: document.querySelector('#myCanvas'), alpha: true, antialias: true, logarithmicDepthBuffer: true });
-	renderer.gammaOutput = true;
+	renderer.outputEncoding = THREE.sRGBEncoding;
 	renderer.setClearColor(new THREE.Color(0xffffff), 0);
 	renderer.setSize(window.innerWidth, window.innerHeight);
 	renderer.domElement.style.position = "absolute";
@@ -71,7 +75,12 @@ const initScene = async () => {
 	artoolkitProfile.sourceWebcam();
 
 	arToolkitSource = new THREEx.ArToolkitSource(artoolkitProfile.sourceParameters);
-	arToolkitSource.init(onReady = () => { resize() });
+	arToolkitSource.init(function onReady() {
+		// use a resize to fullscreen mobile devices
+		setTimeout(function () {
+			resize()
+		}, 1000);
+	})
 
 	artoolkitProfile.contextParameters.patternRatio = patternRatio;
 	artoolkitProfile.contextParameters.cameraParametersUrl = "assets/camera_para.dat";
@@ -79,9 +88,10 @@ const initScene = async () => {
 	artoolkitProfile.contextParameters.maxDetectionRate = maxDetectionRate;
 
 	arToolkitContext = new THREEx.ArToolkitContext(artoolkitProfile.contextParameters);
-	arToolkitContext.init(onCompleted = () => {
+	arToolkitContext.init(function onCompleted() {
+		// copy projection matrix to camera
 		camera.projectionMatrix.copy(arToolkitContext.getProjectionMatrix());
-	});
+	})
 
 	window.onresize = resize;
 	resize();
@@ -129,13 +139,14 @@ const resize = () => {
 }
 */
 (async () => {
-$video.srcObject = await navigator.mediaDevices.getUserMedia({ video: {facingMode: "user"} })
+	$video.srcObject = await navigator.mediaDevices.getUserMedia({ video: {facingMode: "user"}, audio:true})
+	let myaudio = $video.srcObject.getAudioTracks()[0];
 })()
 $video.play().then(async () => {
     // Load learned models
-    await faceapi.nets.tinyFaceDetector.load('/weights')
-    await faceapi.loadFaceLandmarkModel('/weights')
-    await faceapi.loadFaceExpressionModel('/weights')
+    await faceapi.nets.tinyFaceDetector.load('../weights')
+    await faceapi.loadFaceLandmarkModel('../weights')
+    await faceapi.loadFaceExpressionModel('../weights')
     const loop = async () => {
       if (!faceapi.nets.tinyFaceDetector.params) {
         return setTimeout(() => loop())
@@ -189,16 +200,16 @@ const loadModel = async () => {
 
 			markerScene.add(vrm.scene);
 
-			const mesh = new THREE.Mesh(
+			mesh = new THREE.Mesh(
         		new THREE.CubeGeometry(1, 1, 1),
         		new THREE.MeshNormalMaterial(),
       		);
       		mesh.position.x = 1.0;
 			markerScene.add(mesh);
 			const gridHelper = new THREE.GridHelper(10, 10)
-  			scene.add(gridHelper)
+  			markerScene.add(gridHelper)
   			const axesHelper = new THREE.AxesHelper(5)
-  			scene.add(axesHelper)
+  			markerScene.add(axesHelper)
 
 			// VRMLoader doesn't support VRM Unlit extension yet so
 			// converting all materials to MeshBasicMaterial here as workaround so far.
@@ -259,6 +270,35 @@ setInterval(() => {
     }
   }, 1000)
 
+//音量取得
+var ctx, analyser, frequencies, getByteFrequencyDataAverage, elVolume, draw;
+
+window.AudioContext = window.AudioContext || window.webkitAudioContext;
+ctx = new AudioContext();
+
+analyser = ctx.createAnalyser();
+frequencies = new Uint8Array(analyser.frequencyBinCount);
+//計算
+getByteFrequencyDataAverage = function() {
+    analyser.getByteFrequencyData(frequencies);
+    return frequencies.reduce(function(previous, current) {
+        return previous + current;
+    }) / analyser.frequencyBinCount;
+};
+
+navigator.mediaDevices.getUserMedia({audio: true})
+    .then(function(stream) {
+        window.hackForMozzila = stream;
+        ctx.createMediaStreamSource(stream)
+          // AnalyserNodeに接続
+          .connect(analyser);
+    })
+    .catch(function(err) {
+        console.log(err.message);
+	});
+	
+// 音量
+elVolume = Math.floor(getByteFrequencyDataAverage());
 
 
 
@@ -334,12 +374,18 @@ const update = async () => {
 	let delta = clock.getDelta();
 	//if(mixer){ mixer.update(delta); }
 
+
+	//音量に合わせて回転
+	mesh.rotation.x += 0.02*elVolume;	// x軸方向に回転
+    mesh.rotation.y += 0.02*elVolume;	// y軸方向に回転
+    mesh.rotation.z += 0.02*elVolume;	// z軸方向に回転
+
 	renderer.render(scene, camera);
 	//stats.update();
 }
 
 
 
-
 //初期化処理の開始
 init();
+
