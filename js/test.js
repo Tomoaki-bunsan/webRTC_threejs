@@ -15,44 +15,7 @@ function setupScene(vrm_parent, avatar_name) {  //シーンを設定
 
   
 
-  const arToolkitSource = new THREEx.ArToolkitSource({
-    sourceType: 'image',
-    sourceUrl : 'data/img.png'
-  });
-
-  arToolkitSource.init(() => {
-    setTimeout(() => {
-      onResize();
-    }, 2000);
-  });
-
-  addEventListener('resize', () => {
-    onResize();
-  });
-
-  function onResize() {
-    arToolkitSource.onResizeElement();
-    arToolkitSource.copyElementSizeTo(renderer.domElement);
-    if (arToolkitContext.arController !== null) {
-      arToolkitSource.copyElementSizeTo(arToolkitContext.arController.canvas);
-    }
-  };
-
-  const arToolkitContext = new THREEx.ArToolkitContext({
-    cameraParametersUrl: 'data/camera_para.dat',
-    detectionMode: 'mono'
-  });
-
-  arToolkitContext.init(() => {
-    camera.projectionMatrix.copy(arToolkitContext.getProjectionMatrix());
-  });
-
-  const arMarkerControls = new THREEx.ArMarkerControls(arToolkitContext, camera, {
-    type: 'pattern',
-    patternUrl: 'data/patt.hiro',
-    changeMatrixMode: 'cameraTransformMatrix'
-  });
-
+  
   scene.add(new THREE.DirectionalLight(0xffffff)); //光源
 
   new THREE.GLTFLoader().load(

@@ -1,22 +1,11 @@
-import * as faceapi from './face-api.js'
-
 //モデルの位置
 const posX = 0;
 const posY = 0;
 const posZ = 1.5;
 //モデルのサイズ
 const scale = 2;
-let vrm
-let blinking = false
-let smiling = false
-let lipDist
-let headYawAngle
-let prevHeadYawAngle
-const $video = document.getElementById('webcam-video')
-const $landmarkCanvas = document.getElementById('landmarks')
+const $video = document.getElementById('input')
 var mesh
-
-
 //黒枠の幅（ジェネレータのPatternRatioと合わせる）
 const patternRatio = 0.7;
 //マーカーを検出するフレームレート
@@ -42,13 +31,8 @@ let renderer, scene, camera;
 let arToolkitSource, arToolkitContext;
 let markerGroup, markerScene;
 let smoothedControls;
-let mixer;
-
 const clock = new THREE.Clock();
-//const stats = new Stats();
-//document.body.appendChild(stats.dom);
 const loading = document.getElementById("loading");
-
 //THREEのレンダラの初期化
 const initRenderer = async () => {
 	//z-fighting対策でlogarithmicDepthBufferを指定
@@ -111,11 +95,22 @@ const initScene = async () => {
 
 	markerScene = new THREE.Scene();
 	smoothedGroup.add(markerScene);
-
-	//VRMモデルの読み込み
-	const result = await loadModel();
-
-	return result;
+    new THREE.GLTFLoader().load(    //3dモデルを読み込み
+        "models/男女兼用JK.vrm",
+        initVRM, 
+        progress => console.log("Loading model...",100.0 * (progress.loaded / progress.total),"%"),
+        console.error
+    );
+	mesh = new THREE.Mesh(
+        new THREE.CubeGeometry(1, 1, 1),
+        new THREE.MeshNormalMaterial(),
+      );
+      mesh.position.x = 1.0;
+    markerScene.add(mesh);
+    const gridHelper = new THREE.GridHelper(10, 10)
+      markerScene.add(gridHelper)
+      const axesHelper = new THREE.AxesHelper(5)
+      markerScene.add(axesHelper)
 }
 
 //ブラウザのリサイズ時の処理
@@ -126,183 +121,83 @@ const resize = () => {
 		arToolkitSource.copyElementSizeTo(arToolkitContext.arController.canvas);
 	}
 }
-/*async function setupCamera(videoElement) {    //カメラを用意
-    const constraints = {video: {width: 320,height: 240, facingMode: "user"}, audio: true};
-    const stream = await navigator.mediaDevices.getUserMedia(constraints);
-    videoElement.srcObject = stream;
-    return new Promise(resolve => {
-      videoElement.onloadedmetadata = () => {
-        videoElement.play();
-        resolve();
-      };
-    });
-}
-*/
+
+//カメラを用意
 (async () => {
 	$video.srcObject = await navigator.mediaDevices.getUserMedia({ video: {facingMode: "user"}, audio:true})
-	let myaudio = $video.srcObject.getAudioTracks()[0];
+
+    console.log("camera");
 })()
-$video.play().then(async () => {
-    // Load learned models
-    await faceapi.nets.tinyFaceDetector.load('../weights')
-    await faceapi.loadFaceLandmarkModel('../weights')
-    await faceapi.loadFaceExpressionModel('../weights')
-    const loop = async () => {
-      if (!faceapi.nets.tinyFaceDetector.params) {
-        return setTimeout(() => loop())
-      }
-      // Exampleを参考に設定
-      const option = new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 })
-      const result = await faceapi.detectSingleFace($video, option).withFaceLandmarks().withFaceExpressions()
-      if (result) {
-        // デバッグをしつつ決めた値をスレッショルドとする(表情筋が硬い場合は下げようね！)
-        if (result.expressions.happy > 0.7) {
-          smiling = true
-        }
-        // 頭部回転角度を鼻のベクトルに近似する
-        // 68landmarksの定義から鼻のベクトルを求める
-        const upperNose = result.landmarks.positions[27]
-        const lowerNose = result.landmarks.positions[30]
-        let noseVec = lowerNose.sub(upperNose)
-        noseVec = new THREE.Vector2(noseVec.x, noseVec.y)
-        // angle関数はx+方向を基準に角度を求めるため、π/2引いておき、逆回転のマイナスをかける
-        headYawAngle = -(noseVec.angle() - (Math.PI / 2))
-        // リップシンク
-        // 68landmarksの定義から、口の垂直距離を測る
-        const upperLip = result.landmarks.positions[51]
-        const lowerLip = result.landmarks.positions[57]
-        lipDist = lowerLip.y - upperLip.y
-        // デバッグ用にcanvasに表示する
-        const dims = faceapi.matchDimensions($landmarkCanvas, $video, true)
-        const resizedResult = faceapi.resizeResults(result, dims)
-        faceapi.draw.drawFaceLandmarks($landmarkCanvas, resizedResult)
-      }
-      setTimeout(() => loop())
-    }
-	loop()
-})
-//VRMモデルの読み込み
-const loadModel = async () => {
-	//vrmファイルの読み込み
-	const vrmLoader = new THREE.VRMLoader();
-	const result = await new Promise(resolve => {
-		vrmLoader.load("models/男女兼用JK.vrm", (vrm) => {
-			vrm.scene.position.x = posX;
-			vrm.scene.position.y = posY;
-			vrm.scene.position.z = posZ;
-			vrm.scene.scale.x = scale;
-			vrm.scene.scale.y = scale;
-			vrm.scene.scale.z = scale;
-			vrm.scene.rotation.x = 0.0;
-			vrm.scene.rotation.y = Math.PI;
-			vrm.scene.rotation.z = 0.0;
-			if(!stand){ vrm.scene.rotation.x = -Math.PI / 2.0; }
 
-			markerScene.add(vrm.scene);
 
-			mesh = new THREE.Mesh(
-        		new THREE.CubeGeometry(1, 1, 1),
-        		new THREE.MeshNormalMaterial(),
-      		);
-      		mesh.position.x = 1.0;
-			markerScene.add(mesh);
-			const gridHelper = new THREE.GridHelper(10, 10)
-  			markerScene.add(gridHelper)
-  			const axesHelper = new THREE.AxesHelper(5)
-  			markerScene.add(axesHelper)
-
-			// VRMLoader doesn't support VRM Unlit extension yet so
-			// converting all materials to MeshBasicMaterial here as workaround so far.
-			vrm.scene.traverse((object) => {
-				if(!object.material){ return; }
-
-				if(Array.isArray(object.material)){
-					for(let i = 0, il = object.material.length; i < il; i ++){
-						const material = new THREE.MeshBasicMaterial();
-						THREE.Material.prototype.copy.call(material, object.material[i]);
-						material.color.copy(object.material[i].color);
-						material.map = object.material[i].map;
-						material.lights = false;
-						material.skinning = object.material[i].skinning;
-						material.morphTargets = object.material[i].morphTargets;
-						material.morphNormals = object.material[i].morphNormals;
-						object.material[i] = material;
-					}
-				}else{
-					const material = new THREE.MeshBasicMaterial();
-					THREE.Material.prototype.copy.call(material, object.material);
-					material.color.copy(object.material.color);
-					material.map = object.material.map;
-					material.lights = false;
-					material.skinning = object.material.skinning;
-					material.morphTargets = object.material.morphTargets;
-					material.morphNormals = object.material.morphNormals;
-					object.material = material;
-				}
-			});
-
-			/*  mixer = new THREE.AnimationMixer(vrm.scene);
-
-			//別のgltfからモーションを借用。本来は不要な処理
-			//http://examples.claygl.xyz/examples/basicModelAnimation.html
-			const boneLoader = new THREE.GLTFLoader();
-			boneLoader.load("assets/SambaDancing.gltf", function(bone){
-				const animations = bone.animations;
-				if(animations && animations.length){
-					for(let animation of animations){
-						correctBoneName(animation.tracks);
-						correctCoordinate(animation.tracks);
-						mixer.clipAction(animation).play();
-					}
-				}
-			});
-			*/
-			return resolve(vrm.scene);
-		});
-	});
-
-	return result;
+async function initVRM(gltf) {
+    window.vrm = await THREE.VRM.from(gltf);
+    vrm.scene.position.x = posX;
+	vrm.scene.position.y = posY;
+	vrm.scene.position.z = posZ;
+	vrm.scene.scale.x = scale;
+	vrm.scene.scale.y = scale;
+	vrm.scene.scale.z = scale;
+	vrm.scene.rotation.x = 0.0;
+	vrm.scene.rotation.y = 0.0;
+    vrm.scene.rotation.z = 0.0;
+    if(!stand){ vrm.scene.rotation.x = -Math.PI / 2.0; }//ここを消すとqrに垂直になる
+    markerScene.add(vrm.scene);
+    vrm.humanoid.getBoneNode(THREE.VRMSchema.HumanoidBoneName.Hips).rotation.y = Math.PI;
+    vrm.humanoid.getBoneNode(THREE.VRMSchema.HumanoidBoneName.LeftUpperArm).rotation.z = Math.PI * 2 / 5;
+    vrm.humanoid.getBoneNode(THREE.VRMSchema.HumanoidBoneName.RightUpperArm).rotation.z = -Math.PI * 2 / 5;
+    const head = vrm.humanoid.getBoneNode( THREE.VRMSchema.HumanoidBoneName.Head );
+    window.clock = new THREE.Clock();
+    clock.start();
+    renderer.render(scene, camera);
+    console.log("initVRM");
 }
 
-setInterval(() => {
-    if (Math.random() < 0.15) {
-      blinking = true
+function estimatePose(annotations) {    //顔の角度の計算
+    const faces = annotations.silhouette;
+    const x1 = new THREE.Vector3().fromArray(faces[9]);
+    const x2 = new THREE.Vector3().fromArray(faces[27]);
+    const y1 = new THREE.Vector3().fromArray(faces[18]);
+    const y2 = new THREE.Vector3().fromArray(faces[0]);
+    const xaxis = x2.sub(x1).normalize();
+    const yaxis = y2.sub(y1).normalize();
+    const zaxis = new THREE.Vector3().crossVectors(xaxis, yaxis);
+    const mat = new THREE.Matrix4().makeBasis(xaxis, yaxis, zaxis).premultiply(
+      new THREE.Matrix4().makeRotationZ(Math.PI)
+    );
+    return new THREE.Quaternion().setFromRotationMatrix(mat);
+    console.log("estimatePose");
+}
+//顔の検出と描画
+function startRender(input, output, model) {  
+    const ctx = output.getContext("2d");
+    async function renderFrame() {
+      requestAnimationFrame(renderFrame);
+      vrm.update(clock.getDelta()); 
+      const faces = await model.estimateFaces(input, false, false);
+      ctx.clearRect(0, 0, output.width, output.height);
+      faces.forEach(face => {
+        face.scaledMesh.forEach(xy => {
+          ctx.beginPath();
+          ctx.arc(xy[0], xy[1], 1, 0, 2 * Math.PI);
+          ctx.fill();
+        });
+        const annotations = face.annotations;
+        const q = estimatePose(annotations);
+        const head = vrm.humanoid.getBoneNode(THREE.VRMSchema.HumanoidBoneName.Head);
+        head.quaternion.slerp(q, 0.1);
+        const blink = Math.max( 0.0, 1.0 - 10.0 * Math.abs( ( clock.getElapsedTime() % 4.0 ) - 2.0 ) );
+        vrm.blendShapeProxy.setValue(THREE.VRMSchema.BlendShapePresetName.Blink, blink);
+        const lipsLowerInner = annotations.lipsLowerInner[5];
+        const lipsUpperInner = annotations.lipsUpperInner[5];
+        const expressionA = Math.max(0, Math.min(1, (lipsLowerInner[1] - lipsUpperInner[1])/10.0));
+        vrm.blendShapeProxy.setValue(THREE.VRMSchema.BlendShapePresetName.A, expressionA);
+      });
+      renderer.render(scene, camera);
     }
-  }, 1000)
-
-//音量取得
-var ctx, analyser, frequencies, getByteFrequencyDataAverage, elVolume, draw;
-
-window.AudioContext = window.AudioContext || window.webkitAudioContext;
-ctx = new AudioContext();
-
-analyser = ctx.createAnalyser();
-frequencies = new Uint8Array(analyser.frequencyBinCount);
-//計算
-getByteFrequencyDataAverage = function() {
-    analyser.getByteFrequencyData(frequencies);
-    return frequencies.reduce(function(previous, current) {
-        return previous + current;
-    }) / analyser.frequencyBinCount;
-};
-
-navigator.mediaDevices.getUserMedia({audio: true})
-    .then(function(stream) {
-        window.hackForMozzila = stream;
-        ctx.createMediaStreamSource(stream)
-          // AnalyserNodeに接続
-          .connect(analyser);
-    })
-    .catch(function(err) {
-        console.log(err.message);
-	});
-	
-// 音量
-elVolume = Math.floor(getByteFrequencyDataAverage());
-
-
-
-//初期化処理
+    renderFrame();
+    console.log("startRender");
+}
 const init = async () => {
 	let resRenderer = initRenderer();
 	let resScene = initScene();
@@ -319,73 +214,152 @@ const init = async () => {
 const update = async () => {
 	requestAnimationFrame(update);
 
-	if (vrm) {
-		const deltaTime = clock.getDelta()
-		let s = Math.sin(Math.PI * clock.elapsedTime)
-		if (smiling) {
-		  s *= 2
-		  vrm.blendShapeProxy.setValue(VRMSchema.BlendShapePresetName.A, 0)
-		  vrm.blendShapeProxy.setValue(VRMSchema.BlendShapePresetName.Joy, s)
-		  if (Math.abs(s) < 0.1) {
-			smiling = false
-			vrm.blendShapeProxy.setValue(VRMSchema.BlendShapePresetName.Joy, 0)
-		  }
-		} else if (blinking) {
-		  s *= 5
-		  vrm.blendShapeProxy.setValue(VRMSchema.BlendShapePresetName.Blink, s)
-		  if (Math.abs(s) < 0.1) {
-			blinking = false
-			vrm.blendShapeProxy.setValue(VRMSchema.BlendShapePresetName.Blink, 0)
-		  }
-		}
-		// vrm.blendShapeProxy.setValue( 'a', 0.5 + 0.5 * s );
-		if (lipDist && !smiling) {
-		  // 初期距離(30)を引いて、口を最大限に開けた時を最大値とした時を参考に割合を決める
-		  let lipRatio = (lipDist - 30) / 25
-		  if (lipRatio < 0) {
-			lipRatio = 0
-		  } else if (lipRatio > 1) {
-			lipRatio = 1
-		  }
-		  vrm.blendShapeProxy.setValue(VRMSchema.BlendShapePresetName.A, lipRatio)
-		}
-		if (headYawAngle) {
-		  if (Math.abs(prevHeadYawAngle - headYawAngle) > 0.02) {
-			// 変化を増幅させる
-			const y = headYawAngle * 2.5
-			if (Math.abs(y) < Math.PI / 2) {
-			  vrm.humanoid.getBoneNode(VRMSchema.HumanoidBoneName.Head).rotation.y = y
-			}
-		  }
-		  prevHeadYawAngle = headYawAngle
-		}
-		vrm.humanoid.getBoneNode(VRMSchema.HumanoidBoneName.LeftUpperArm).rotation.z = Math.PI / 3
-		vrm.humanoid.getBoneNode(VRMSchema.HumanoidBoneName.RightUpperArm).rotation.z = -Math.PI / 3
-  
-		// update vrm
-		vrm.update(deltaTime)
-	  }
-
 	if(arToolkitSource.ready === false){ return; }
 	arToolkitContext.update(arToolkitSource.domElement);
 
 	smoothedControls.update(markerGroup);
-
-	let delta = clock.getDelta();
-	//if(mixer){ mixer.update(delta); }
-
-
-	//音量に合わせて回転
-	mesh.rotation.x += 0.02*elVolume;	// x軸方向に回転
-    mesh.rotation.y += 0.02*elVolume;	// y軸方向に回転
-    mesh.rotation.z += 0.02*elVolume;	// z軸方向に回転
-
+    mesh.rotation.x += 0.01*elVolume;	// x軸方向に回転
+    mesh.rotation.y += 0.01*elVolume;	// y軸方向に回転
+   	mesh.rotation.z += 0.01*elVolume;	// z軸方向に回転
+	
 	renderer.render(scene, camera);
-	//stats.update();
+
 }
-
-
 
 //初期化処理の開始
 init();
 
+//音量取得
+var ctx2, analyser, frequencies, getByteFrequencyDataAverage, elVolume = 1, draw;
+
+window.AudioContext = window.AudioContext || window.webkitAudioContext;
+ctx2 = new AudioContext();
+
+analyser = ctx2.createAnalyser();
+frequencies = new Uint8Array(analyser.frequencyBinCount);
+//計算
+getByteFrequencyDataAverage = function() {
+    analyser.getByteFrequencyData(frequencies);
+    return frequencies.reduce(function(previous, current) {
+        return previous + current;
+    }) / analyser.frequencyBinCount;
+};
+
+navigator.mediaDevices.getUserMedia({audio: true})
+    .then(function(stream) {
+        window.hackForMozzila = stream;
+        ctx2.createMediaStreamSource(stream)
+          // AnalyserNodeに接続
+          .connect(analyser);
+    })
+    .catch(function(err) {
+        console.log(err.message);
+	});
+	
+// 音量
+elVolume = Math.floor(getByteFrequencyDataAverage());
+console.log(elVolume);
+
+//ここが動かない
+async function start() {
+    const output = document.getElementById("output");
+    const model = await facemesh.load({ maxFaces: 1 });
+    startRender(input, output, model);
+  }
+
+
+
+// SkyWay(WebRTC)
+ const peer = new Peer({
+    key: '72aa90ed-09d6-439b-9a8b-138055d85ca7',
+    debug: 3
+});
+
+peer.on('open', () => {
+    document.getElementById('my-id').textContent = peer.id;
+});
+
+let localStream;
+
+
+const localId = document.getElementById('my-id');
+const videosContainer = document.getElementById('videos-container');
+
+const roomId = document.getElementById('room-id');
+const messages = document.getElementById('messages');
+const joinTrigger = document.getElementById('join-trigger');
+const leaveTrigger = document.getElementById('leave-trigger');
+
+const localText = document.getElementById('local-text');
+const sendTrigger = document.getElementById('send-trigger');
+const nickname = document.getElementById('nickname');
+
+
+joinTrigger.addEventListener('click', () => {
+    const room = peer.joinRoom(roomId.value, {
+        mode: 'sfu',
+        stream: localStream,
+    });
+
+    room.on('open', () => {
+        messages.textContent += `===You joined===\n`;
+    });
+
+    room.on('peerJoin', peerId => {
+        messages.textContent += `===${peerId} joined===\n`;
+    });
+
+
+    room.on('data', ({ data, src }) => {
+        // Show a message sent to the room and who sent
+        messages.textContent += `${src} ${data}\n`;
+    });
+
+    sendTrigger.addEventListener('click', onClickSend);
+
+    function onClickSend() {
+        // Send message to all of the peers in the room via websocket
+        room.send(`(${nickname.value}): ${localText.value}`);
+
+        messages.textContent += `${peer.id}(${nickname.value}): ${localText.value}\n`;
+        localText.value = '';
+    }
+
+
+    room.on('stream', async stream => {
+        const remoteVideo = document.createElement('video');
+        remoteVideo.style.height =  '240px';
+        remoteVideo.srcObject = stream;
+        remoteVideo.playsInline = true;
+        remoteVideo.setAttribute('data-peer-id', stream.peerId);
+        videosContainer.append(remoteVideo);
+
+        await remoteVideo.play().catch(console.error);
+    });
+
+    room.on('peerLeave', peerId => {
+        const remoteVideo = videosContainer.querySelector(`[data-peer-id="${peerId}"]`);
+        remoteVideo.srcObject.getTracks().forEach(track => {
+            track.stop();
+        });
+        remoteVideo.srcObject = null;
+        remoteVideo.remove();
+
+        messages.textContent += `===${peerId} left===\n`;
+    });
+
+    room.once('close', () => {
+        messages.textContent += '===You left ===\n';
+        const remoteVideos = videosContainer.querySelectorAll('[data-peer-id]');
+        Array.from(remoteVideos)
+            .forEach(remoteVideo => {
+                remoteVideo.srcObject.getTracks().forEach(track => track.stop());
+                remoteVideo.srcObject = null;
+                remoteVideo.remove();
+            });
+    });
+
+    leaveTrigger.addEventListener('click', () => {
+        room.close();
+    }, { once: true });
+});
