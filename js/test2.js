@@ -1,3 +1,32 @@
+var wsUri = 'http://localhost:1242';
+var socketio = io(wsUri);
+var beat;
+socketio.on('beats', (DeviceID, ComputedHeartRate) => {
+    console.log(DeviceID, ComputedHeartRate);
+    if(id == DeviceID) updateData(ComputedHeartRate);
+    else if(!id) updateData(ComputedHeartRate);
+    beat = ComputedHeartRate; 
+});
+
+let updateData = (beat) => {
+    lastBeat = beat;
+    //document.querySelector('#textArea').textContent = beat;
+}
+
+let getParam = (name, url) => {
+    if (!url) url = window.location.href;
+    name = name.replace(/[\[\]]/g, "\\$&");
+    let regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)");
+    let results = regex.exec(url);
+    if(!results) return null;
+    if(!results[2]) return '';
+    return decodeURIComponent(results[2].replace(/\+/g, " "));
+}
+
+
+let chart, beatMotionLoop, lastBeat;
+let id = getParam('id') || 0;
+
 //モデルの位置
 const posX = 0;
 const posY = 0;
@@ -94,7 +123,9 @@ const initScene = async () => {
 	smoothedControls = new THREEx.ArSmoothedControls(smoothedGroup);
 
 	markerScene = new THREE.Scene();
-	smoothedGroup.add(markerScene);
+    smoothedGroup.add(markerScene);
+    const ARlight = new THREE.DirectionalLight(0xffffff, 0.75);
+	markerScene.add(ARlight);
     new THREE.GLTFLoader().load(    //3dモデルを読み込み
         "models/男女兼用JK.vrm",
         initVRM, 
@@ -218,9 +249,9 @@ const update = async () => {
 	arToolkitContext.update(arToolkitSource.domElement);
 
 	smoothedControls.update(markerGroup);
-    mesh.rotation.x += 0.01*elVolume;	// x軸方向に回転
-    mesh.rotation.y += 0.01*elVolume;	// y軸方向に回転
-   	mesh.rotation.z += 0.01*elVolume;	// z軸方向に回転
+    mesh.rotation.x += 0.001*beat;	// x軸方向に回転
+    mesh.rotation.y += 0.001*beat;	// y軸方向に回転
+   	//mesh.rotation.z += 0.001*beat;	// z軸方向に回転
 	
 	renderer.render(scene, camera);
 
@@ -229,7 +260,7 @@ const update = async () => {
 //初期化処理の開始
 init();
 
-//音量取得
+/*  音量取得
 var ctx2, analyser, frequencies, getByteFrequencyDataAverage, elVolume = 1, draw;
 
 window.AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -259,6 +290,7 @@ navigator.mediaDevices.getUserMedia({audio: true})
 // 音量
 elVolume = Math.floor(getByteFrequencyDataAverage());
 console.log(elVolume);
+*/
 
 //ここが動かない
 async function start() {
@@ -363,3 +395,4 @@ joinTrigger.addEventListener('click', () => {
         room.close();
     }, { once: true });
 });
+
