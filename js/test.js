@@ -123,8 +123,11 @@ function bpm(){
     }else if(80 <= bpm_value){
       document.getElementById("heartbeat").play();  //音の再生
       cube.material.color.set('orange');
+      var face_color = scene.getObjectByName("Face.baked_7");
+      face_color.color = new THREE.Vector3(0, 0, 1);
       renderer.render(scene, camera);
     }
+    
   }
   var timer = setInterval(func,10000)
 }

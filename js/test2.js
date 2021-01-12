@@ -240,7 +240,8 @@ const init = async () => {
 	//更新処理の開始
 	requestAnimationFrame(update);
 }
-
+let angleRad = 0;
+let scaling = 0;
 //更新処理
 const update = async () => {
 	requestAnimationFrame(update);
@@ -249,10 +250,20 @@ const update = async () => {
 	arToolkitContext.update(arToolkitSource.domElement);
 
 	smoothedControls.update(markerGroup);
-    mesh.rotation.x += 0.001*beat;	// x軸方向に回転
-    mesh.rotation.y += 0.001*beat;	// y軸方向に回転
-   	//mesh.rotation.z += 0.001*beat;	// z軸方向に回転
-	
+    //mesh.rotation.x += 0.001*beat;	// x軸方向に回転
+    //mesh.rotation.y += 0.001*beat;	// y軸方向に回転
+    
+
+    angleRad += 1 * Math.PI / 180;
+    scaling = 0.8*Math.sin(beat*0.05*angleRad);
+    
+    mesh.scale.x = 0.2+scaling;
+    mesh.scale.y = 0.2+scaling;
+    mesh.scale.z = 0.2+scaling;
+    /*if(beat>100){
+       var face_color = markerScene.getObjectByName("Face.baked_7");
+       face_color.material.color=('red');
+    }*/
 	renderer.render(scene, camera);
 
 }
