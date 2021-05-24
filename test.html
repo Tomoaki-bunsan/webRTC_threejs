@@ -3,19 +3,20 @@
 
 <head>
     <meta charset="UTF-8">
+    <script src="./js/socket.io.js"></script>
     <script src="js/three.min.js"></script>
     <script src="js/GLTFLoader.js"></script>
     <script src="https://raw.githack.com/AR-js-org/AR.js/3.1.0/three.js/build/ar.js"></script>
+    <script src="https://cdn.webrtc.ecl.ntt.com/skyway-latest.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@pixiv/three-vrm@0.3.5/lib/three-vrm.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/facemesh"></script>
-    <script src="js/test.js"></script>
+    <script src="./js/test.js"></script>
+    
+    <script src="js/jquery-3.3.1.min.js"></script>
     <!-- <script src="OrbitControls.js"></script> -->
     <title>chat_with_avater</title>
-    <script src="https://cdn.webrtc.ecl.ntt.com/skyway-latest.js"></script>
-    <audio id="heartbeat" preload="auto">
-        <source src="./sounds/心音.wav" type="audio/wav">
-    </audio>
+
 </head>
 
 <body>
@@ -58,14 +59,15 @@
 
     <div id="videos-container" class="videos-container">
         <span id="vrm_parent"
-            style="border:solid 1px red;width:320px;height:240px;overflow:hidden;box-sizing:content-box; display:inline-block;"></span>
+            style="border:solid 1px red;width:640px;height:360px;overflow:hidden;box-sizing:content-box; display:inline-block;"></span>
     </div>
+    <canvas id="dataCanvas" width="160" height="120" style="border:solid 1px rgb(0, 0, 0);box-sizing:content-box;"></canvas>
     <div class="oneline">
-        <video id='input' width="320" height="240" autoplay muted playsinline
+        <video id='input' width="640" height="360" autoplay muted playsinline
             style="border:solid 1px blue;box-sizing:content-box;display:inline-block;"></video>
 
         <span style="position:relative;display:inline-block;">
-            <canvas id='output' width="320" height="240"
+            <canvas id='output' width="640" height="360"
                 style="border:solid 1px yellow;box-sizing:content-box;"></canvas>
             <span id='loadingicon' class="fa fa-spinner fa-spin"
                 style="position:absolute;font-size:100px;top:70px;left: 110px;display:none;"></span>
@@ -73,10 +75,7 @@
         <p><canvas id="myCanvas"></canvas></p>
     </div>
 
-    <p>BPM<span id="span"></span></p>
-    <input type="text" value="" id="bpm" >
-    <input type="button" value="BPM" onclick="bpm()">
-    <input type="button" value="クリア" onclick="clearbpm()">
+
 
     <script>
         const peer = new Peer({
@@ -106,7 +105,7 @@
 
         joinTrigger.addEventListener('click', () => {
             const room = peer.joinRoom(roomId.value, {
-                mode: 'sfu',
+                mode: 'mesh',
                 stream: localStream,
             });
 
@@ -137,7 +136,7 @@
 
             room.on('stream', async stream => {
                 const remoteVideo = document.createElement('video');
-                remoteVideo.style.height =  '240px';
+                remoteVideo.style.height =  '360px';
                 remoteVideo.srcObject = stream;
                 remoteVideo.playsInline = true;
                 remoteVideo.setAttribute('data-peer-id', stream.peerId);

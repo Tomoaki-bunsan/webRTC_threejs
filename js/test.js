@@ -1,3 +1,79 @@
+var wsUri = 'http://localhost:1242';
+var socketio = io(wsUri,{ transports: [ 'websocket' ] });
+var beat;
+socketio.on('beats', (DeviceID, ComputedHeartRate) => {
+    console.log(DeviceID, ComputedHeartRate);
+    if(id == DeviceID) updateData(ComputedHeartRate);
+    else if(!id) updateData(ComputedHeartRate);
+    beat = ComputedHeartRate; 
+});
+
+let updateData = (beat) => {
+    lastBeat = beat;
+    //document.querySelector('#textArea').textContent = beat;
+}
+
+let getParam = (name, url) => {
+    if (!url) url = window.location.href;
+    name = name.replace(/[\[\]]/g, "\\$&");
+    let regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)");
+    let results = regex.exec(url);
+    if(!results) return null;
+    if(!results[2]) return '';
+    return decodeURIComponent(results[2].replace(/\+/g, " "));
+}
+
+
+let chart, beatMotionLoop, lastBeat;
+let id = getParam('id') || 0;
+
+function initData(){
+  const width = 160;
+  const height = 120;
+  const Drenderer = new THREE.WebGLRenderer({
+    canvas: document.querySelector('#dataCanvas')
+  });
+  // レンダラーを作成
+  Drenderer.setPixelRatio(window.devicePixelRatio);
+  Drenderer.setSize(width, height);
+  // シーンを作成
+  const Dscene = new THREE.Scene();
+
+  // カメラを作成
+  const Dcamera = new THREE.PerspectiveCamera(90, width / height);
+  Dcamera.position.set(0, 0, 300);
+  
+  
+  var length = 0.05*beat;
+  const geometry = new THREE.CubeGeometry(100, 100, 100);
+  const material = new THREE.MeshBasicMaterial({color:0xFF0000});
+  const cube = new THREE.Mesh(geometry, material);
+  Dscene.add(cube);
+
+  const ambient = new THREE.AmbientLight(0xf8f8ff, 0.9);
+  Dscene.add(ambient);
+
+  tick();
+
+  function tick() {
+    if(cube.scale.x > 2 || cube.scale.x < 0.5) {
+      length = -length;
+    }
+    cube.scale.x += 0.02*length;
+    cube.scale.y += 0.02*length;
+    cube.scale.z += 0.02*length;
+    cube.rotation.x += 0.2;
+    cube.rotation.y += 0.2;
+    if(beat<90){
+      cube.material.color.setHex( 0xffffff );
+    }
+    Drenderer.render(Dscene, Dcamera); // レンダリング
+    console.log("length=",length)
+    console.log("cube.scale.x=",cube.scale.x)
+    requestAnimationFrame(tick);
+  }
+}
+
 function setupScene(vrm_parent, avatar_name) {  //シーンを設定
   window.renderer = new THREE.WebGLRenderer({
     canvas: document.querySelector('#myCanvas'),
@@ -6,11 +82,11 @@ function setupScene(vrm_parent, avatar_name) {  //シーンを設定
     logarithmicDepthBuffer: true
   });
   renderer.setClearColor(new THREE.Color(), 0);
-  renderer.setSize(320, 240);
+  renderer.setSize(640, 360);
   renderer.setPixelRatio(window.devicePixelRatio);
   vrm_parent.appendChild(renderer.domElement);
-  window.camera = new THREE.PerspectiveCamera(120.0, 4.0 / 3.0, 0.1, 100.0); //カメラの初期化
-
+  window.camera = new THREE.PerspectiveCamera(90.0, 4.0 / 3.0, 0.1, 5.0); //カメラの初期化
+  //50.0, 4.0 / 3.0, 0.1, 5.0
   window.scene = new THREE.Scene();
 
   
@@ -24,6 +100,8 @@ function setupScene(vrm_parent, avatar_name) {  //シーンを設定
     progress => console.log("Loading model...", 100.0 * (progress.loaded / progress.total), "%"),
     console.error
   );
+
+  
 }
 
 async function initVRM(gltf) {
@@ -35,13 +113,15 @@ async function initVRM(gltf) {
   const head = vrm.humanoid.getBoneNode(THREE.VRMSchema.HumanoidBoneName.Head);
   camera.position.set(0.0, head.getWorldPosition(new THREE.Vector3()).y + 0.05 , 0.5); //(0.0, 1.5, 0.5)ぐらい
 
+  
+  
   window.clock = new THREE.Clock();
   clock.start();
   renderer.render(scene, camera);
 }
 
 async function setupCamera(videoElement) {  //カメラを用意
-  const constraints = { video: { width: 320, height: 240 }, audio: true }; 
+  const constraints = { video: { width: 640, height: 360 }, audio: true }; 
   const stream = await navigator.mediaDevices.getUserMedia(constraints);
   let myaudio = stream.getAudioTracks()[0];  //カメラから音声を抜き取る
   videoElement.srcObject = stream;
@@ -74,10 +154,15 @@ function estimatePose(annotations) {  //顔の角度の計算
   return new THREE.Quaternion().setFromRotationMatrix(mat);
 }
 
+var angleRad = 0;
+var scaling = 0;
+
 function startRender(input, output, model) {
   const ctx = output.getContext("2d");
   async function renderFrame() {
     requestAnimationFrame(renderFrame);
+
+    manipulator.update();
     vrm.update(clock.getDelta());
     const faces = await model.estimateFaces(input, false, false);
     ctx.clearRect(0, 0, output.width, output.height);
@@ -103,38 +188,34 @@ function startRender(input, output, model) {
   renderFrame();
 }
 
-function bpm(){
-  /*
-  テキストボックスに数字を入れる
-  数字を取得後、数字に応じた音を鳴らして、背景の色を変える
-  */
-  var func = function(){
-    var bpm_value = document.getElementById("bpm").value;
-    document.getElementById("heartbeat").pause();
-    var geometry = new THREE.BoxGeometry( 20, 30, 1 ); //背景
-    var material = new THREE.MeshBasicMaterial( {color: 'skyblue'} );
-    var cube = new THREE.Mesh( geometry, material );
-    cube.position.set(0, -5, -15);
-    scene.add( cube );
-    if (bpm_value < 80){
-      document.getElementById("heartbeat").pause();  //音の停止
-      cube.material.color.set('skyblue');  //色の変更
-      renderer.render(scene, camera);
-    }else if(80 <= bpm_value){
-      document.getElementById("heartbeat").play();  //音の再生
-      cube.material.color.set('orange');
-      var face_color = scene.getObjectByName("Face.baked_7");
-      face_color.color = new THREE.Vector3(0, 0, 1);
-      renderer.render(scene, camera);
-    }
-    
-  }
-  var timer = setInterval(func,10000)
-}
+import { Manipulator } from 'utsuroi'
 
-function clearbpm(){
-  document.getElementById("bpm").value = "";
-}
+let manipulator;
+
+// Load asset
+var loader = new THREE.GLTFLoader();
+loader.load('assets/test.gltf', (gltf) {
+  scene.add(gltf.scene)
+
+  // アニメーションの操作者を作成
+  manipulator = new Manipulator(gltf.scene, gltf.animations); 
+
+  // 初期状態として再生したいアニメーション名を指定
+  manipulator.play('0', true);
+});
+
+
+function bpm(){
+  if(beat>100){
+    manipulator.to('1', 100, true);
+    renderer.render(scene, camera);
+  }
+  if(beat<100){
+    manipulator.to('2', 100, true);
+    renderer.render(scene, camera);
+  }
+};
+
 
 async function start() {
   const tmp = document.getElementById("avatar").value; //avaterの種類を格納
@@ -145,6 +226,6 @@ async function start() {
   await setupCamera(input);
   const model = await facemesh.load({ maxFaces: 1 });
   startRender(input, output, model);
-  bpm();
-  clearbpm();
+  //bpm();
+  initData();
 }

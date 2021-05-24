@@ -261,8 +261,21 @@ const update = async () => {
     mesh.scale.y = 0.2+scaling;
     mesh.scale.z = 0.2+scaling;
     /*if(beat>100){
-       var face_color = markerScene.getObjectByName("Face.baked_7");
-       face_color.material.color=('red');
+        var loader = new THREE.FontLoader();
+        loader.load('helvetiker_regular.typeface.json', function(font){
+	    var textGeometry = new THREE.TextGeometry("nervous!", {
+		  font: font,
+		  size: 20,
+		  height: 5,
+		  curveSegments: 12
+    	});
+	    var materials = [
+		    new THREE.MeshBasicMaterial( { color: Math.random() * 0xffffff, overdraw: 0.5 } ),
+		    new THREE.MeshBasicMaterial( { color: 0x000000, overdraw: 0.5 } )
+	    ];
+	    var textMesh = new THREE.Mesh(textGeometry, materials);
+	    scene.add(textMesh);
+      });
     }*/
 	renderer.render(scene, camera);
 
@@ -340,7 +353,7 @@ const nickname = document.getElementById('nickname');
 
 joinTrigger.addEventListener('click', () => {
     const room = peer.joinRoom(roomId.value, {
-        mode: 'sfu',
+        mode: 'mesh',
         stream: localStream,
     });
 
