@@ -45,7 +45,7 @@ function initData(){
 
   // Load GLTF or GLB
   const loader = new THREE.GLTFLoader();
-  const url = './asset/test.glb';
+  const url = './assets/test.glb';
   let model = null;
     loader.load(
         url,
@@ -62,7 +62,7 @@ function initData(){
         }
     );
   
-  var length = 0.05*beat;
+  var length = 0.05*100;
   /*const geometry = new THREE.CubeGeometry(100, 100, 100);
   const material = new THREE.MeshBasicMaterial({color:0xFF0000});
   const cube = new THREE.Mesh(geometry, material);
