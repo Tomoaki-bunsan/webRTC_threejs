@@ -162,7 +162,7 @@ function startRender(input, output, model) {
   async function renderFrame() {
     requestAnimationFrame(renderFrame);
 
-    manipulator.update();
+    //manipulator.update();
     vrm.update(clock.getDelta());
     const faces = await model.estimateFaces(input, false, false);
     ctx.clearRect(0, 0, output.width, output.height);
@@ -188,20 +188,21 @@ function startRender(input, output, model) {
   renderFrame();
 }
 
-import { Manipulator } from 'utsuroi'
+/*
 
-let manipulator;
+var manipulator;
 
 // Load asset
+var Bscene = new THREE.Scene();
 var loader = new THREE.GLTFLoader();
-loader.load('assets/test.gltf', (gltf) {
-  scene.add(gltf.scene)
+loader.load('assets/test.gltf', function (gltf){
+  Bscene.add(gltf.scene)
 
   // アニメーションの操作者を作成
-  manipulator = new Manipulator(gltf.scene, gltf.animations); 
+  manipulator = new Utsuroi.Manipulator(gltf.scene, gltf.animations); 
 
   // 初期状態として再生したいアニメーション名を指定
-  manipulator.play('0', true);
+  manipulator.play('1', true);
 });
 
 
@@ -215,7 +216,7 @@ function bpm(){
     renderer.render(scene, camera);
   }
 };
-
+*/
 
 async function start() {
   const tmp = document.getElementById("avatar").value; //avaterの種類を格納
