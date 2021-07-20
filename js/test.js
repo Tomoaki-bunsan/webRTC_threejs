@@ -42,13 +42,31 @@ function initData(){
   // カメラを作成
   const Dcamera = new THREE.PerspectiveCamera(90, width / height);
   Dcamera.position.set(0, 0, 300);
-  
+
+  // Load GLTF or GLB
+  const loader = new THREE.GLTFLoader();
+  const url = './asset/test.glb';
+  let model = null;
+    loader.load(
+        url,
+        function (gltf) {
+            model = gltf.scene;
+            model.scale.set(100.0, 100.0, 100.0);
+            model.position.set(0, 0, 0);
+            //回転の調整
+            //model.rotation.y = THREE.Math.DEG2RAD * -45;
+            scene.add(model);
+        },
+        function (error) {
+            console.log('An error happened');
+        }
+    );
   
   var length = 0.05*beat;
-  const geometry = new THREE.CubeGeometry(100, 100, 100);
+  /*const geometry = new THREE.CubeGeometry(100, 100, 100);
   const material = new THREE.MeshBasicMaterial({color:0xFF0000});
   const cube = new THREE.Mesh(geometry, material);
-  Dscene.add(cube);
+  Dscene.add(cube);*/
 
   const ambient = new THREE.AmbientLight(0xf8f8ff, 0.9);
   Dscene.add(ambient);
@@ -56,20 +74,21 @@ function initData(){
   tick();
 
   function tick() {
-    if(cube.scale.x > 2 || cube.scale.x < 0.5) {
-      length = -length;
-    }
-    cube.scale.x += 0.02*length;
-    cube.scale.y += 0.02*length;
-    cube.scale.z += 0.02*length;
-    cube.rotation.x += 0.2;
-    cube.rotation.y += 0.2;
-    if(beat<90){
-      cube.material.color.setHex( 0xffffff );
+    if (model) {
+      if(model.scale.x > 2 || model.scale.x < 0.5) {
+        length = -length;
+      }
+      model.scale.x += 0.02*length;
+      model.scale.y += 0.02*length;
+      model.scale.z += 0.02*length;
+      model.rotation.z += 0.2;
+      if(beat<90){
+        model.material.color.setHex( 0xffffff );
+      }
     }
     Drenderer.render(Dscene, Dcamera); // レンダリング
     console.log("length=",length)
-    console.log("cube.scale.x=",cube.scale.x)
+    console.log("cube.scale.x=",model.scale.x)
     requestAnimationFrame(tick);
   }
 }
